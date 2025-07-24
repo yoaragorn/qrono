@@ -1,0 +1,22 @@
+# --- General ---
+# Log files and temporary files
+*.log
+.DS_Store
+
+# --- Environment Variables ---
+# Never commit your secrets!
+.env
+
+# --- Node.js Dependencies ---
+# These are installed via 'npm install' so they don't need to be in version control
+node_modules/
+
+# --- Build Artifacts ---
+# The 'dist' folder is generated when you build the frontend for production
+dist/
+/client/dist
+
+# --- IDE/Editor Folders ---
+# Common editor-specific folders
+.vscode/
+.idea/
