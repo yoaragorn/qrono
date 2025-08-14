@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/db');
-const fs = require('fs').promises;
+const fs = require('fs'); // Use the synchronous 'fs' for existsSync
+const fsp = require('fs').promises; // Use the promise-based 'fs' for unlink
 const multer = require('multer');
 const path = require('path');
 
@@ -114,7 +115,11 @@ router.put('/:id', [auth, upload.single('cover_image')], async (req, res) => {
         fieldsToUpdate.cover_image_url = path.join('uploads', req.file.filename);
         if (oldAlbum.cover_image_url) {
           try {
-            await fs.unlink(path.join(__dirname, '..', oldAlbum.cover_image_url));
+            const oldFilePath = path.join(__dirname, '..', oldAlbum.cover_image_url);
+            if (fs.existsSync(oldFilePath)) {
+              await fsp.unlink(oldFilePath);
+              console.log(`Successfully deleted old cover: ${oldAlbum.cover_image_url}`);
+            }
           } catch (fileErr) {
             console.error(`Could not delete old cover file:`, fileErr.message);
           }
@@ -154,7 +159,11 @@ router.delete('/:id', auth, async (req, res) => {
 
         if (coverImageToDelete) {
             try {
-                await fs.unlink(path.join(__dirname, '..', coverImageToDelete));
+                const filePath = path.join(__dirname, '..', coverImageToDelete);
+                if (fs.existsSync(filePath)) {
+                    await fsp.unlink(filePath);
+                    console.log(`Successfully deleted album cover: ${filePath}`);
+                }
             } catch (fileErr) {
                 console.error(`Error deleting album cover ${coverImageToDelete}:`, fileErr.message);
             }
@@ -162,7 +171,11 @@ router.delete('/:id', auth, async (req, res) => {
         if (photosToDeleteRows.length > 0) {
             await Promise.all(photosToDeleteRows.map(async (photo) => {
                 try {
-                    await fs.unlink(path.join(__dirname, '..', photo.image_url));
+                    const filePath = path.join(__dirname, '..', photo.image_url);
+                    if (fs.existsSync(filePath)) {
+                        await fsp.unlink(filePath);
+                        console.log(`Successfully deleted memory photo: ${filePath}`);
+                    }
                 } catch (fileErr) {
                     console.error(`Error deleting memory photo ${photo.image_url}:`, fileErr.message);
                 }
