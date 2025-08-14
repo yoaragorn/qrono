@@ -2,6 +2,12 @@
 const express = require('express');
 const cors = require('cors');
 
+// --- DIAGNOSTIC LOG ---
+console.log('--- STARTING SERVER ---');
+console.log('DATABASE_URL is set to:', process.env.DATABASE_URL ? 'A value is present' : '!!! UNDEFINED !!!');
+console.log('NODE_ENV is set to:', process.env.NODE_ENV);
+console.log('-----------------------');
+
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
