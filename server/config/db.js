@@ -1,11 +1,14 @@
 // server/config/db.js
 const { Pool } = require('pg');
-require('dotenv').config();
+
+// Only load the .env file if we are not in a production environment.
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+// -----------------------
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // This is the standard configuration for Render's PostgreSQL.
-  // The 'pg' library will automatically enable SSL if the connection string requires it.
   ssl: {
     rejectUnauthorized: false
   }

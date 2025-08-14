@@ -1,7 +1,10 @@
 // Import required packages
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config(); // This line loads the .env file
+
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 // Import routes
 const authRoutes = require('./routes/auth'); // <-- IMPORT YOUR ROUTES
