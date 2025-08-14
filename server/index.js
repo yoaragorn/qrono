@@ -1,6 +1,7 @@
 // Import required packages
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs'); 
 
 // --- DIAGNOSTIC LOG ---
 console.log('--- STARTING SERVER ---');
@@ -11,6 +12,14 @@ console.log('-----------------------');
 if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+    console.log('Created uploads directory.');
+}
+
 
 // Import routes
 const authRoutes = require('./routes/auth'); // <-- IMPORT YOUR ROUTES
@@ -36,10 +45,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Enable the Express server to parse JSON bodies in requests
 app.use(express.json());
-// --- CRITICAL for serving uploaded files ---
-// This makes the 'uploads' folder publicly accessible.
-// For example, an image at 'uploads/image.jpg' can be accessed at 'http://localhost:3001/uploads/image.jpg'
-app.use('/uploads', express.static('uploads'));
 
 // --- Routes ---
 // A simple test route to make sure the server is running
