@@ -1,23 +1,14 @@
-const mysql = require('mysql2');
+// server/config/db.js
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// Create a connection "pool". A pool is more efficient than a single connection
-// because it manages multiple connections that can be reused for concurrent requests.
-// This is perfect for a web server.
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-
-  ssl: {
-    "rejectUnauthorized": true
-  }
+// The 'pg' library is smart. If DATABASE_URL exists (like on Render), it will use it.
+// For local development, you'll need to create a local PostgreSQL instance and add its
+// connection URL to your .env file.
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // This SSL setting is required for Render's production environment.
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// By using `pool.promise()`, we can use the modern async/await syntax
-// instead of messy callbacks for our database queries.
-module.exports = pool. promise();
+module.exports = pool;
