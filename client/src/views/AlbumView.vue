@@ -186,8 +186,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const coverImageUrl = computed(() => {
   if (albumStore.currentAlbum && albumStore.currentAlbum.cover_image_url) {
-    const imagePath = albumStore.currentAlbum.cover_image_url.replace(/\\/g, '/');
-    return `${API_BASE_URL}/${imagePath}`;
+    return new URL(albumStore.currentAlbum.cover_image_url, API_BASE_URL).href;
   }
   return null;
 });

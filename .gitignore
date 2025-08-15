@@ -6,15 +6,23 @@
 # --- Environment Variables ---
 # Never commit your secrets!
 .env
+.env.*
+!/.env.example
 
 # --- Node.js Dependencies ---
 # These are installed via 'npm install' so they don't need to be in version control
 node_modules/
+/client/node_modules/
+/server/node_modules/
 
 # --- Build Artifacts ---
 # The 'dist' folder is generated when you build the frontend for production
 dist/
 /client/dist
+
+# --- User Generated Content ---
+# This prevents local test images from being committed
+/server/uploads/
 
 # --- IDE/Editor Folders ---
 # Common editor-specific folders

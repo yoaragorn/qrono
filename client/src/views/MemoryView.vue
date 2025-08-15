@@ -140,10 +140,8 @@ const renderedMarkdown = computed(() => {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getImageUrl = (relativePath) => {
   if (!relativePath) return '';
-  // The relativePath from the DB should be 'uploads/image.png'
-  // This function correctly combines it with the base URL.
-  // This code is ALREADY CORRECT.
-  return `${API_BASE_URL}/${relativePath.replace(/\\/g, '/')}`;
+  // Use the same robust URL constructor here.
+  return new URL(relativePath, API_BASE_URL).href;
 };
 
 const goBack = () => {
