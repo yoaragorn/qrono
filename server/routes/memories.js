@@ -3,43 +3,31 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/db');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '..', 'uploads')); 
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-  }
-});
-const fileFilter = (req, file, cb) => {
-  if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
-      req.fileValidationError = 'Only image files are allowed!';
-      return cb(new Error('Only image files are allowed!'), false);
-  }
-  cb(null, true);
-};
-const upload = multer({ storage: storage, fileFilter: fileFilter });
+// --- NEW CLOUDINARY IMPORTS ---
+const { storage, cloudinary } = require('../config/cloudinary');
+const upload = multer({ storage: storage });
+// ------------------------------
 
 // @route   POST /api/memories
 router.post('/', [auth, upload.array('photos', 10)], async (req, res) => {
-    if(req.fileValidationError) {
-        return res.status(400).json({ msg: req.fileValidationError });
-    }
     const { title, diary_entry, album_id } = req.body;
+
+    if (!title || !album_id) {
+        return res.status(400).json({ msg: 'Title and album ID are required.' });
+    }
+
     try {
         const sql = 'INSERT INTO memories (title, diary_entry, album_id) VALUES ($1, $2, $3) RETURNING id';
         const { rows } = await db.query(sql, [title, diary_entry, album_id]);
         const memoryId = rows[0].id;
 
         if (req.files && req.files.length > 0) {
-            const photos = req.files.map(file => {
-                const relativePath = path.join('uploads', file.filename);
-                return [memoryId, relativePath];
-            });
-            // PostgreSQL requires a different approach for bulk inserts with 'pg'
+            // req.files now contains an array of files uploaded to Cloudinary
+            const photos = req.files.map(file => [
+                memoryId,
+                file.path // The secure URL from Cloudinary
+            ]);
+
             for (const photo of photos) {
                 await db.query('INSERT INTO photos (memory_id, image_url) VALUES ($1, $2)', photo);
             }
@@ -51,7 +39,7 @@ router.post('/', [auth, upload.array('photos', 10)], async (req, res) => {
     }
 });
 
-// @route   GET /api/memories/:id
+// @route   GET /api/memories/:id (No change needed here, it just reads URLs from DB)
 router.get('/:id', auth, async (req, res) => {
   try {
     const { rows: memoryRows } = await db.query(`
@@ -92,13 +80,15 @@ router.delete('/:id', auth, async (req, res) => {
       await db.query('DELETE FROM memories WHERE id = $1', [req.params.id]);
   
       if (photosToDeleteRows.length > 0) {
-        await Promise.all(photosToDeleteRows.map(async (photo) => {
-            try {
-                await fs.unlink(path.join(__dirname, '..', photo.image_url));
-            } catch (fileErr) {
-                console.error(`Error deleting file ${photo.image_url}:`, fileErr.message);
-            }
-        }));
+        const publicIdsToDelete = photosToDeleteRows.map(photo => {
+            const publicId = photo.image_url.split('/').pop().split('.')[0];
+            return `qrono/${publicId}`;
+        });
+        
+        cloudinary.api.delete_resources(publicIdsToDelete, (error, result) => {
+            if(error) console.error("Error deleting resources from Cloudinary:", error);
+            else console.log("Successfully deleted memory photos from Cloudinary:", result);
+        });
       }
       res.json({ msg: 'Memory deleted successfully' });
     } catch (err) {
@@ -127,33 +117,27 @@ router.put('/:id', [auth, upload.array('photos', 10)], async (req, res) => {
 
         await db.query('UPDATE memories SET title = $1, diary_entry = $2 WHERE id = $3', [title, diary_entry, memoryId]);
 
-        let filesToDeleteFromDisk = [];
         if (parsedPhotosToDelete.length > 0) {
             const { rows: results } = await db.query('SELECT image_url FROM photos WHERE id = ANY($1::bigint[])', [parsedPhotosToDelete]);
-            filesToDeleteFromDisk = results.map(r => r.image_url);
+            
+            const publicIdsToDelete = results.map(r => `qrono/${r.image_url.split('/').pop().split('.')[0]}`);
+
+            if (publicIdsToDelete.length > 0) {
+                cloudinary.api.delete_resources(publicIdsToDelete, (error, result) => {
+                    if(error) console.error("Error deleting resources from Cloudinary:", error);
+                    else console.log("Successfully deleted selected photos from Cloudinary:", result);
+                });
+            }
             await db.query('DELETE FROM photos WHERE id = ANY($1::bigint[])', [parsedPhotosToDelete]);
         }
 
         if (req.files && req.files.length > 0) {
-            const newPhotos = req.files.map(file => {
-                const relativePath = path.join('uploads', file.filename);
-                return [memoryId, relativePath];
-            });
+            const newPhotos = req.files.map(file => [memoryId, file.path]);
             for (const photo of newPhotos) {
                 await db.query('INSERT INTO photos (memory_id, image_url) VALUES ($1, $2)', photo);
             }
         }
         
-        if (filesToDeleteFromDisk.length > 0) {
-            await Promise.all(filesToDeleteFromDisk.map(async (filePath) => {
-                try {
-                    await fs.unlink(path.join(__dirname, '..', filePath));
-                } catch (fileErr) {
-                    console.error(`Could not delete old file ${filePath}:`, fileErr.message);
-                }
-            }));
-        }
-
         const { rows: updatedMemoryRows } = await db.query('SELECT * FROM memories WHERE id = $1', [memoryId]);
         const { rows: updatedPhotoRows } = await db.query('SELECT * FROM photos WHERE memory_id = $1', [memoryId]);
         

@@ -2,20 +2,13 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const db = require('../config/db');
-const fs = require('fs'); // Use the synchronous 'fs' for existsSync
-const fsp = require('fs').promises; // Use the promise-based 'fs' for unlink
 const multer = require('multer');
-const path = require('path');
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '..', 'uploads'));
-  },
-  filename: function (req, file, cb) {
-    cb(null, 'albumcover-' + Date.now() + path.extname(file.originalname));
-  }
-});
+// --- NEW CLOUDINARY IMPORTS ---
+const { storage, cloudinary } = require('../config/cloudinary');
 const upload = multer({ storage: storage });
+// ------------------------------
+
+// We no longer need fs or path for file system operations in this file.
 
 // @route   POST /api/albums
 router.post('/', [auth, upload.single('cover_image')], async (req, res) => {
@@ -27,8 +20,9 @@ router.post('/', [auth, upload.single('cover_image')], async (req, res) => {
   }
 
   try {
-    const cover_image_url = req.file ? path.join('uploads', req.file.filename) : null;
-    
+    // req.file.path is now a secure URL from Cloudinary.
+    const cover_image_url = req.file ? req.file.path : null;
+
     const sql = `INSERT INTO albums (title, description, visible, cover_image_url, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`;
     const values = [title, description, visible === 'true', cover_image_url, user_id];
     
@@ -44,7 +38,7 @@ router.post('/', [auth, upload.single('cover_image')], async (req, res) => {
   }
 });
 
-// @route   GET /api/albums
+// @route   GET /api/albums (No change needed here, it just reads URLs from DB)
 router.get('/', auth, async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM albums WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
@@ -55,7 +49,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// @route   GET /api/albums/:id
+// @route   GET /api/albums/:id (No change needed here)
 router.get('/:id', auth, async (req, res) => {
   try {
     const { rows } = await db.query('SELECT * FROM albums WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
@@ -69,12 +63,12 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
       
-// @route   GET /api/albums/:id/memories
+// @route   GET /api/albums/:id/memories (No change needed here)
 router.get('/:id/memories', auth, async (req, res) => {
   try {
     const { rows: albumRows } = await db.query('SELECT id FROM albums WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     if (albumRows.length === 0) {
-      return res.status(404).json({ msg: 'Album not found or you do not have permission to view it.' });
+      return res.status(404).json({ msg: 'Album not found.' });
     }
 
     const { rows: memories } = await db.query('SELECT * FROM memories WHERE album_id = $1 ORDER BY created_at DESC', [req.params.id]);
@@ -82,8 +76,7 @@ router.get('/:id/memories', auth, async (req, res) => {
     const memoriesWithCovers = await Promise.all(
       memories.map(async (memory) => {
         const { rows: photos } = await db.query('SELECT image_url FROM photos WHERE memory_id = $1 LIMIT 1', [memory.id]);
-        const coverImagePath = photos.length > 0 ? photos[0].image_url : null;
-        return { ...memory, cover_image_url: coverImagePath };
+        return { ...memory, cover_image_url: photos.length > 0 ? photos[0].image_url : null };
       })
     );
     res.json(memoriesWithCovers);
@@ -112,17 +105,14 @@ router.put('/:id', [auth, upload.single('cover_image')], async (req, res) => {
       if (visible !== undefined) fieldsToUpdate.visible = visible === 'true';
   
       if (req.file) {
-        fieldsToUpdate.cover_image_url = path.join('uploads', req.file.filename);
+        fieldsToUpdate.cover_image_url = req.file.path; // The new URL from Cloudinary
+        // If there was an old cover, delete it from Cloudinary
         if (oldAlbum.cover_image_url) {
-          try {
-            const oldFilePath = path.join(__dirname, '..', oldAlbum.cover_image_url);
-            if (fs.existsSync(oldFilePath)) {
-              await fsp.unlink(oldFilePath);
-              console.log(`Successfully deleted old cover: ${oldAlbum.cover_image_url}`);
-            }
-          } catch (fileErr) {
-            console.error(`Could not delete old cover file:`, fileErr.message);
-          }
+          const publicId = oldAlbum.cover_image_url.split('/').pop().split('.')[0];
+          cloudinary.uploader.destroy(`qrono/${publicId}`, (error, result) => {
+            if (error) console.error("Failed to delete old image from Cloudinary:", error);
+            else console.log("Successfully deleted old image from Cloudinary:", result);
+          });
         }
       }
   
@@ -149,38 +139,36 @@ router.delete('/:id', auth, async (req, res) => {
     try {
         const { rows: albumRows } = await db.query('SELECT id, cover_image_url FROM albums WHERE id = $1 AND user_id = $2', [albumId, userId]);
         if (albumRows.length === 0) {
-            return res.status(404).json({ msg: 'Album not found or you do not have permission to delete it.' });
+            return res.status(404).json({ msg: 'Album not found.' });
         }
-        const coverImageToDelete = albumRows[0].cover_image_url;
+        const coverImageToDeleteUrl = albumRows[0].cover_image_url;
 
         const { rows: photosToDeleteRows } = await db.query(`SELECT p.image_url FROM photos p JOIN memories m ON p.memory_id = m.id WHERE m.album_id = $1`, [albumId]);
         
         await db.query('DELETE FROM albums WHERE id = $1', [albumId]);
 
-        if (coverImageToDelete) {
-            try {
-                const filePath = path.join(__dirname, '..', coverImageToDelete);
-                if (fs.existsSync(filePath)) {
-                    await fsp.unlink(filePath);
-                    console.log(`Successfully deleted album cover: ${filePath}`);
-                }
-            } catch (fileErr) {
-                console.error(`Error deleting album cover ${coverImageToDelete}:`, fileErr.message);
-            }
+        // --- NEW: Cloudinary Deletion Logic ---
+        const publicIdsToDelete = [];
+
+        if (coverImageToDeleteUrl) {
+            const publicId = coverImageToDeleteUrl.split('/').pop().split('.')[0];
+            publicIdsToDelete.push(`qrono/${publicId}`);
         }
         if (photosToDeleteRows.length > 0) {
-            await Promise.all(photosToDeleteRows.map(async (photo) => {
-                try {
-                    const filePath = path.join(__dirname, '..', photo.image_url);
-                    if (fs.existsSync(filePath)) {
-                        await fsp.unlink(filePath);
-                        console.log(`Successfully deleted memory photo: ${filePath}`);
-                    }
-                } catch (fileErr) {
-                    console.error(`Error deleting memory photo ${photo.image_url}:`, fileErr.message);
-                }
-            }));
+            photosToDeleteRows.forEach(photo => {
+                const publicId = photo.image_url.split('/').pop().split('.')[0];
+                publicIdsToDelete.push(`qrono/${publicId}`);
+            });
         }
+
+        if (publicIdsToDelete.length > 0) {
+            cloudinary.api.delete_resources(publicIdsToDelete, (error, result) => {
+                if(error) console.error("Error deleting resources from Cloudinary:", error);
+                else console.log("Successfully deleted resources from Cloudinary:", result);
+            });
+        }
+        // --- END OF NEW LOGIC ---
+
         res.json({ msg: 'Album and all associated content deleted successfully' });
     } catch (err) {
         console.error('Error in DELETE /api/albums/:id:', err.message);
