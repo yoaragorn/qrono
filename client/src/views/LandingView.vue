@@ -39,7 +39,7 @@
 import { ref } from 'vue';
 
 const features = ref([
-  { title: 'Create Albums', text: 'Organize your memories beautiful photo albums.', icon: 'mdi-image-album' },
+  { title: 'Create Albums', text: 'Organize your memories with beautiful photo albums.', icon: 'mdi-image-album' },
   { title: 'Write Diaries', text: 'Write rich diary entries for your photos with Markdown.', icon: 'mdi-book-open-page-variant' },
   { title: 'Dual Security', text: 'Secure sensitive albums with a second password check.', icon: 'mdi-lock-check' },
 ]);
