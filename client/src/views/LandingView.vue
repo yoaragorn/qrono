@@ -18,7 +18,7 @@
       <v-row>
         <v-col v-for="feature in features" :key="feature.title" cols="12" md="4">
           <v-card class="mx-auto" max-width="344" variant="outlined">
-            <v-list-item lines="three">
+            <v-list-item lines="four">
               <div>
                 <div class="text-overline mb-4">FEATURE</div>
                 <v-list-item-title class="text-h6 mb-1">{{ feature.title }}</v-list-item-title>
