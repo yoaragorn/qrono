@@ -18,7 +18,7 @@
       <v-row>
         <v-col v-for="feature in features" :key="feature.title" cols="12" md="4">
           <v-card class="mx-auto" max-width="344" variant="outlined">
-            <v-list-item lines="four">
+            <v-list-item lines="three">
               <div>
                 <div class="text-overline mb-4">FEATURE</div>
                 <v-list-item-title class="text-h6 mb-1">{{ feature.title }}</v-list-item-title>
@@ -39,9 +39,9 @@
 import { ref } from 'vue';
 
 const features = ref([
-  { title: 'Create Albums', text: 'Organize your memories into beautiful, distinct albums for every occasion.', icon: 'mdi-image-album' },
-  { title: 'Write Diaries', text: 'Accompany your photos with rich diary entries using Markdown formatting.', icon: 'mdi-book-open-page-variant' },
-  { title: 'Dual Security', text: 'Keep your most sensitive albums extra safe with a second password verification.', icon: 'mdi-lock-check' },
+  { title: 'Create Albums', text: 'Organize your memories beautiful photo albums.', icon: 'mdi-image-album' },
+  { title: 'Write Diaries', text: 'Write rich diary entries for your photos with Markdown.', icon: 'mdi-book-open-page-variant' },
+  { title: 'Dual Security', text: 'Secure sensitive albums with a second password check.', icon: 'mdi-lock-check' },
 ]);
 </script>
 
