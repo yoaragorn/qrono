@@ -35,7 +35,7 @@
 
     <!-- Main content area where router views are displayed -->
     <v-main>
-      <v-container fluid>
+      <v-container fluid :class="{ 'pa-0': isLandingPage }">
         <Suspense>
           <!-- The main content to be displayed once ready -->
           <template #default>
@@ -79,10 +79,15 @@ import { useAuthStore } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { useRouter } from 'vue-router';
 import { onMounted } from 'vue';
+import { computed } from 'vue'; // <-- Add computed to your imports
+import { useRoute } from 'vue-router'; // <-- Add useRoute to your imports
 
 const authStore = useAuthStore();
 const router = useRouter();
 const uiStore = useUiStore();
+const route = useRoute(); // <-- Get the current route object
+
+const isLandingPage = computed(() => route.name === 'landing');
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
