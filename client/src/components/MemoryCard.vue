@@ -1,7 +1,7 @@
 <template>
   <v-card>
     <v-img
-      :src="coverImageUrl"
+      :src="memory.cover_image_url || 'https://cdn.vuetifyjs.com/images/parallax/material.jpg'"
       height="150px"
       cover
       class="grey-lighten-2 align-end text-white"
@@ -9,7 +9,6 @@
       style="cursor: pointer;"
       gradient="to bottom, rgba(0,0,0,.1), rgba(0,0,0,.6)"
     >
-      <!-- Put the title inside the image for a nicer look -->
       <v-card-title>{{ memory.title }}</v-card-title>
     </v-img>
 
@@ -48,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useAlbumStore } from '@/stores/albums';
 import { useUiStore } from '@/stores/ui';
 
@@ -88,19 +87,4 @@ const confirmDelete = async () => {
     isDeleting.value = false;
   }
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-// --- THIS IS THE CORRECTED COMPUTED PROPERTY ---
-const coverImageUrl = computed(() => {
-  // Check if the memory object has a cover_image_url and it's not empty
-  if (props.memory && props.memory.cover_image_url) {
-    // Take the relative path, replace backslashes, and PREPEND the base URL
-    const imagePath = props.memory.cover_image_url.replace(/\\/g, '/');
-    return `${API_BASE_URL}/${imagePath}`;
-  }
-  // If no image, provide a default placeholder
-  return 'https://cdn.vuetifyjs.com/images/parallax/material.jpg';
-});
-// ---------------------------------------------
 </script>
