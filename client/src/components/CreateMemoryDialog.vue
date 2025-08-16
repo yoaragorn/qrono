@@ -23,7 +23,9 @@
               <v-row dense>
                 <v-col v-for="photo in existingPhotos" :key="photo.id" cols="auto">
                   <v-card class="position-relative" @click="markPhotoForDeletion(photo.id)">
-                    <v-img :src="getImageUrl(photo.image_url)" width="100" height="100" cover>
+                    <!-- === THIS IS THE FIX === -->
+                    <!-- Bind directly to the full URL from the API -->
+                    <v-img :src="photo.image_url" width="100" height="100" cover>
                        <div class="d-flex fill-height align-center justify-center">
                           <v-icon color="white" size="x-large">mdi-close-circle-outline</v-icon>
                        </div>
@@ -93,23 +95,12 @@ const newPhotos = ref([]);
 const existingPhotos = ref([]);
 const photosToDelete = ref(new Set());
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const getImageUrl = (relativePath) => {
-  if (!relativePath) return '';
-  return `${API_BASE_URL}/${relativePath.replace(/\\/g, '/')}`;
-};
-
 const closeDialog = () => {
   emit('update:modelValue', false);
 };
 
 const markPhotoForDeletion = (photoId) => {
-  if (photosToDelete.value.has(photoId)) {
-    photosToDelete.value.delete(photoId); // This would be for an "undo" feature
-  } else {
-    photosToDelete.value.add(photoId);
-  }
-  // Visually remove it from the list by filtering
+  photosToDelete.value.add(photoId);
   existingPhotos.value = existingPhotos.value.filter(p => p.id !== photoId);
 };
 
@@ -185,19 +176,27 @@ const processFiles = async (files) => {
 
   const compressedFiles = [];
   for (const file of files) {
+    // Check if the file is a candidate for compression
     if (file.size > 500 * 1024 && file.type.startsWith('image/')) {
       try {
         console.log(`Compressing ${file.name}...`);
         const compressedFile = await imageCompression(file, compressionOptions);
         console.log(`Compressed ${file.name} from ${(file.size / 1024).toFixed(2)} KB to ${(compressedFile.size / 1024).toFixed(2)} KB`);
-        // Create a new File object to retain the original filename
+
+        // Create a new File object to retain the original filename, which is important for the backend
         compressedFiles.push(new File([compressedFile], file.name, { type: compressedFile.type }));
-      } catch (error) {
-        console.error("Compression failed for file:", file.name, error);
-        compressedFiles.push(file); // Fallback to original
+      } catch (err) { // <-- The 'err' variable is now used
+        // --- THIS IS THE FIX ---
+        // Log the specific error to the console for debugging purposes.
+        console.error("Image compression failed, using original file instead. Error:", err);
+        // -----------------------
+
+        // Fallback to using the original file if compression fails.
+        compressedFiles.push(file);
       }
     } else {
-      compressedFiles.push(file); // Add small files or non-images directly
+      // If the file is already small or not an image, add it directly.
+      compressedFiles.push(file);
     }
   }
   return compressedFiles;
@@ -214,7 +213,6 @@ const processFiles = async (files) => {
 .right-0 {
   right: 0;
 }
-/* Style for the delete overlay on existing photos */
 .v-img .v-icon {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
