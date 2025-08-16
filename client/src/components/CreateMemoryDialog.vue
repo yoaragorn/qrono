@@ -19,12 +19,10 @@
 
             <!-- Display Existing Photos When Editing -->
             <div v-if="isEditing && existingPhotos.length > 0" class="mt-4">
-              <label class="v-label mb-2">Current Photos (click to remove)</label>
+              <label class="v-label mb-2">Current Photos ({{ existingPhotos.length }}/10) - click to remove</label>
               <v-row dense>
                 <v-col v-for="photo in existingPhotos" :key="photo.id" cols="auto">
                   <v-card class="position-relative" @click="markPhotoForDeletion(photo.id)">
-                    <!-- === THIS IS THE FIX === -->
-                    <!-- Bind directly to the full URL from the API -->
                     <v-img :src="photo.image_url" width="100" height="100" cover>
                        <div class="d-flex fill-height align-center justify-center">
                           <v-icon color="white" size="x-large">mdi-close-circle-outline</v-icon>
@@ -37,7 +35,9 @@
 
             <v-file-input
               v-model="newPhotos"
-              :label="isEditing ? 'Upload More Photos' : 'Upload Photos'"
+              :label="photoInputLabel"
+              :rules="photoRules"
+              :disabled="isPhotoInputDisabled"
               multiple
               chips
               show-size
@@ -94,6 +94,37 @@ const diary_entry = ref('');
 const newPhotos = ref([]);
 const existingPhotos = ref([]);
 const photosToDelete = ref(new Set());
+
+const photoInputLabel = computed(() => {
+  if (isEditing.value) {
+    const remaining = 10 - existingPhotos.value.length;
+    return remaining > 0 ? `Upload up to ${remaining} more photos` : 'Maximum photos reached';
+  }
+  return 'Upload Photos (up to 10)';
+});
+
+const isPhotoInputDisabled = computed(() => {
+  if (isEditing.value) {
+    return existingPhotos.value.length >= 10;
+  }
+  return false;
+});
+
+const photoRules = computed(() => {
+  return [
+    (value) => {
+      const newPhotoCount = value.length;
+      const existingPhotoCount = isEditing.value ? existingPhotos.value.length : 0;
+      const totalPhotos = newPhotoCount + existingPhotoCount;
+
+      if (totalPhotos > 10) {
+        return `You can have a maximum of 10 photos. You already have ${existingPhotoCount}, please select ${10 - existingPhotoCount} or fewer.`;
+      }
+
+      return true;
+    },
+  ];
+});
 
 const closeDialog = () => {
   emit('update:modelValue', false);
@@ -176,26 +207,17 @@ const processFiles = async (files) => {
 
   const compressedFiles = [];
   for (const file of files) {
-    // Check if the file is a candidate for compression
     if (file.size > 500 * 1024 && file.type.startsWith('image/')) {
       try {
         console.log(`Compressing ${file.name}...`);
         const compressedFile = await imageCompression(file, compressionOptions);
         console.log(`Compressed ${file.name} from ${(file.size / 1024).toFixed(2)} KB to ${(compressedFile.size / 1024).toFixed(2)} KB`);
-
-        // Create a new File object to retain the original filename, which is important for the backend
         compressedFiles.push(new File([compressedFile], file.name, { type: compressedFile.type }));
-      } catch (err) { // <-- The 'err' variable is now used
-        // --- THIS IS THE FIX ---
-        // Log the specific error to the console for debugging purposes.
+      } catch (err) {
         console.error("Image compression failed, using original file instead. Error:", err);
-        // -----------------------
-
-        // Fallback to using the original file if compression fails.
         compressedFiles.push(file);
       }
     } else {
-      // If the file is already small or not an image, add it directly.
       compressedFiles.push(file);
     }
   }
