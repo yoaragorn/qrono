@@ -128,7 +128,7 @@ const handleMouseOver = () => {
 const handleMouseLeave = () => {
   arrowTimer = setTimeout(() => {
     showArrows.value = false;
-  }, 2000);
+  }, 250);
 };
 
 onMounted(() => {
