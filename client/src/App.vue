@@ -117,7 +117,7 @@ const handleDashboard = () => {
 </style>
 
 <style>
-  .v-container {
-    max-width: 960 px !important;
+.v-container {
+    max-width: 960px !important;
 }
 </style>
