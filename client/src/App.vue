@@ -114,8 +114,10 @@ const handleDashboard = () => {
 .headline .white--text {
     color: white !important;
 }
+</style>
 
-.v-container {
+<style>
+  .v-container {
     max-width: 960 px !important;
 }
 </style>
