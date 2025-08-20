@@ -1,3 +1,10 @@
+<!-- This Vue component is a page-level View responsible for displaying a single,
+ complete "memory." It reads the memory's ID from the URL, fetches its full data
+ (including title, text, and all associated photos) from the API via the Pinia store,
+ and then renders it. The page is designed for a rich viewing experience, featuring
+ a photo carousel with interactive elements and a beautifully formatted diary entry.
+ It also serves as the entry point for editing that specific memory. -->
+
 <template>
   <v-container>
     <!-- Top-level check for the loading state -->
@@ -81,62 +88,62 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { marked } from 'marked';
-import { useRoute, useRouter } from 'vue-router';
-import { useAlbumStore } from '@/stores/albums';
-import CreateMemoryDialog from '@/components/CreateMemoryDialog.vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue'; // Import Vue's reactive ref function and lifecycle hooks
+import { marked } from 'marked'; // Import the marked library to render Markdown content
+import { useRoute, useRouter } from 'vue-router'; // Import Vue Router to access route parameters and navigation
+import { useAlbumStore } from '@/stores/albums'; // Import the Pinia store for managing album data
+import CreateMemoryDialog from '@/components/CreateMemoryDialog.vue'; // Import the dialog component for creating or editing memories
 
-const route = useRoute();
-const router = useRouter();
-const albumStore = useAlbumStore();
+const route = useRoute(); // Access the current route to get the memory ID from the URL
+const router = useRouter(); // Access the router to navigate back to the album or dashboard
+const albumStore = useAlbumStore(); // Access the album store to fetch memory details and manage state
 
-const editDialog = ref(false);
-const showArrows = ref(true);
-let arrowTimer = null;
+const editDialog = ref(false); // Reactive reference to control the visibility of the edit dialog
+const showArrows = ref(true); // Reactive reference to control the visibility of carousel arrows
+let arrowTimer = null; // Timer to hide arrows after a period of inactivity
 
-const memory = computed(() => albumStore.currentMemory);
+const memory = computed(() => albumStore.currentMemory); // Computed property to access the current memory from the store
 
-const renderedMarkdown = computed(() => {
-  if (memory.value && memory.value.diary_entry) {
-    return marked(memory.value.diary_entry);
+const renderedMarkdown = computed(() => { // Computed property to render the Markdown diary entry
+  if (memory.value && memory.value.diary_entry) { // Check if the memory and diary entry exist
+    return marked(memory.value.diary_entry); // Use marked to convert Markdown to HTML
   }
-  return '<p><em>No diary entry was written for this memory.</em></p>';
+  return '<p><em>No diary entry was written for this memory.</em></p>'; // Fallback message if no diary entry exists
 });
 
-const openEditDialog = () => {
-  editDialog.value = true;
+const openEditDialog = () => { // Function to open the edit dialog for the current memory
+  editDialog.value = true; // Set the dialog visibility to true
 };
 
-const fetchLatestMemoryData = () => {
-  albumStore.fetchMemoryDetails(route.params.id);
+const fetchLatestMemoryData = () => { // Function to fetch the latest memory data from the store
+  albumStore.fetchMemoryDetails(route.params.id); // Call the store action to fetch memory details using the ID from the route parameters
 };
 
-const goBack = () => {
-  if (memory.value && memory.value.album_id) {
-    router.push(`/album/${memory.value.album_id}`);
-  } else {
-    router.push('/dashboard');
+const goBack = () => { // Function to navigate back to the album or dashboard
+  if (memory.value && memory.value.album_id) { // Check if the memory has an associated album
+    router.push(`/album/${memory.value.album_id}`); // Navigate to the album page using its ID
+  } else { // If no album ID is found, navigate to the dashboard
+    router.push('/dashboard'); // Navigate to the dashboard if no album ID is available
   }
 };
 
-const handleMouseOver = () => {
-  clearTimeout(arrowTimer);
-  showArrows.value = true;
+const handleMouseOver = () => { // Function to handle mouse over events on the carousel
+  clearTimeout(arrowTimer); // Clear any existing timer to prevent hiding arrows
+  showArrows.value = true; /
 };
 
-const handleMouseLeave = () => {
-  arrowTimer = setTimeout(() => {
-    showArrows.value = false;
-  }, 2000);
+const handleMouseLeave = () => { // Function to handle mouse leave events on the carousel
+  arrowTimer = setTimeout(() => { // Set a timer to hide arrows after 2 seconds of inactivity
+    showArrows.value = false; // Hide the arrows...
+  }, 2000); // ... after 2 seconds of inactivity
 };
 
-onMounted(() => {
+onMounted(() => { // Lifecycle hook to fetch memory data when the component is mounted
   handleMouseLeave(); // Start the initial timer to hide arrows
-  fetchLatestMemoryData();
+  fetchLatestMemoryData(); // Fetch the memory details using the ID from the route parameters
 });
 
-onUnmounted(() => {
+onUnmounted(() => { // Lifecycle hook to clean up when the component is unmounted
   // Clean up the timer when the user navigates away to prevent memory leaks
   clearTimeout(arrowTimer);
 });

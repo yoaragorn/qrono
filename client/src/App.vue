@@ -1,3 +1,11 @@
+<!-- This App.vue component acts as the master layout for the Qrono application.
+ It sets up the main structure with a persistent top navigation bar (v-app-bar)
+ and a main content area (v-main). It's responsible for dynamically displaying either
+ "Login/Sign Up" buttons or a user menu based on the user's authentication status.
+ Crucially, it contains the <router-view> placeholder where all other pages are rendered,
+ and it manages global UI elements like the notification snackbar and the
+ page-level loading state via <Suspense>. -->
+
 <template>
   <v-app>
     <!-- App Bar appears on all pages -->
@@ -75,33 +83,33 @@
 </template>
 
 <script setup>
-import { useAuthStore } from '@/stores/auth';
-import { useUiStore } from '@/stores/ui';
-import { useRouter } from 'vue-router';
-import { onMounted } from 'vue';
-import { computed } from 'vue'; // <-- Add computed to your imports
-import { useRoute } from 'vue-router'; // <-- Add useRoute to your imports
+import { useAuthStore } from '@/stores/auth'; // Import the Pinia store for managing authentication state
+import { useUiStore } from '@/stores/ui'; // Import the Pinia store for managing UI state
+import { useRouter } from 'vue-router'; // Import Vue Router to navigate between pages
+import { onMounted } from 'vue'; // Import Vue's lifecycle hook to run code when the component is mounted
+import { computed } from 'vue'; // Import Vue's computed function to create reactive properties
+import { useRoute } from 'vue-router'; // Import Vue Router to access the current route
 
-const authStore = useAuthStore();
-const router = useRouter();
-const uiStore = useUiStore();
-const route = useRoute(); // <-- Get the current route object
+const authStore = useAuthStore(); // Access the authentication store to check if the user is authenticated
+const router = useRouter(); // Access the router to navigate between pages
+const uiStore = useUiStore(); // Access the UI store to manage the snackbar notifications
+const route = useRoute(); // Access the current route to determine if the landing page is being displayed
 
-const isLandingPage = computed(() => route.name === 'landing');
+const isLandingPage = computed(() => route.name === 'landing'); // Computed property to check if the current route is the landing page
 
-onMounted(() => {
-  if (authStore.isAuthenticated) {
-    authStore.fetchUser();
+onMounted(() => { // Lifecycle hook to run code when the component is mounted
+  if (authStore.isAuthenticated) { // If the user is authenticated, fetch the user data
+    authStore.fetchUser(); // Fetch the user data from the server
   }
 });
 
-const handleLogout = () => {
-  authStore.logout();
-  router.push('/login');
+const handleLogout = () => { // Function to handle user logout
+  authStore.logout(); // Call the logout action in the auth store
+  router.push('/login'); // Redirect the user to the login page after logout
 };
 
-const handleDashboard = () => {
-  router.push('/dashboard');
+const handleDashboard = () => { // Function to navigate to the user's dashboard
+  router.push('/dashboard'); // Redirect the user to the dashboard page
 };
 </script>
 

@@ -4,7 +4,7 @@
 .DS_Store
 
 # --- Environment Variables ---
-# Never commit your secrets!
+# Never commit any secrets!
 .env
 .env.*
 !/.env.example
@@ -16,7 +16,7 @@ node_modules/
 /server/node_modules/
 
 # --- Build Artifacts ---
-# The 'dist' folder is generated when you build the frontend for production
+# The 'dist' folder is generated when the frontend for production is built
 dist/
 /client/dist
 

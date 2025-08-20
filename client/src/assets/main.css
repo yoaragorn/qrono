@@ -1,4 +1,4 @@
-/* Import a custom font from Google Fonts */
+/* Import the Roboto font with various weights from Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 /* Apply the font to the entire application body */
@@ -8,12 +8,12 @@ body {
 
 /* --- GLOBAL VUETIFY OVERRIDES --- */
 
-/* Example: Make all card titles slightly bolder */
+/* Make all card titles slightly bolder */
 .v-card-title {
   font-weight: 500 !important;
 }
 
-/* Example: Add a subtle transition to all buttons for a smoother hover effect */
+/* Add a subtle transition to all buttons for a smoother hover effect */
 .v-btn {
   transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out !important;
 }

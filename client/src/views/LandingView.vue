@@ -1,3 +1,10 @@
+<!-- This Vue component is the application's homepage, visible to all visitors.
+ It is a purely presentational component that contains no complex logic. Its sole purpose
+ is to create a visually appealing and informative introduction to the Qrono project.
+ It is composed of two main sections: a large "hero" banner with a custom background image
+ to grab the user's attention, and a "features" section below it that clearly outlines the
+ application's core functionalities. -->
+
 <template>
   <v-container fluid class="pa-0">
     <!-- Hero Section -->
@@ -36,13 +43,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref } from 'vue'; // Import Vue's reactive ref function
 
 const features = ref([
   { title: 'Create Albums', text: 'Organize your memories with beautiful photo albums.', icon: 'mdi-image-album' },
   { title: 'Write Diaries', text: 'Write rich diary entries for your photos with Markdown.', icon: 'mdi-book-open-page-variant' },
   { title: 'Dual Security', text: 'Secure sensitive albums with a second password check.', icon: 'mdi-lock-check' },
-]);
+]); // Reactive reference for the features data
 </script>
 
 <style scoped>
@@ -70,6 +77,6 @@ const features = ref([
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.4); /* 40% opaque black. Adjust as needed. */
-  z-index: -1;
+  z-index: -1; /* Place it behind the text */
 }
 </style>

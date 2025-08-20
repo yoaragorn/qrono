@@ -1,3 +1,8 @@
+<!-- This Vue component defines a self-contained, secure modal dialog that prompts the user
+ to re-enter their password. Its sole purpose is to provide the "dual-layer security" for
+ private albums. It is designed to be controlled from a parent component (the DashboardView)
+ using a simple v-model directive. It manages its own form state, loading indicators, and
+ communicates with the authentication store (Pinia) to verify the password with the backend. -->
 <template>
   <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue')" persistent max-width="500px">
     <v-card>
@@ -35,43 +40,41 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useAuthStore } from '@/stores/auth';
+import { ref } from 'vue'; // Import Vue's Composition API for reactivity
+import { useAuthStore } from '@/stores/auth'; // Import Auth Store for password verification
 import { useUiStore } from '@/stores/ui'; // Import UI Store for better notifications
 
-defineProps({ modelValue: Boolean });
-// --- FIX #1: Clean up emits. 'close' is not needed if we use v-model correctly. ---
-const emit = defineEmits(['update:modelValue']);
+defineProps({ modelValue: Boolean }); // Define props to accept a boolean for dialog visibility
+const emit = defineEmits(['update:modelValue']); // Define emits to update the modelValue prop
 
-const password = ref('');
-const loading = ref(false); // Initialized to false, which is correct.
-const authStore = useAuthStore();
+const password = ref(''); // Ref to hold the password input
+const loading = ref(false); // Ref to manage loading state
+const authStore = useAuthStore(); // Instantiate Auth store to access password verification methods
 const uiStore = useUiStore(); // Instantiate UI store
 
 // Function to close the dialog via v-model
-const closeDialog = () => {
-  emit('update:modelValue', false);
+const closeDialog = () => { // This function is used to close the dialog
+  emit('update:modelValue', false); // Emit an event to update the modelValue prop, effectively closing the dialog
 };
 
-const handleUnlock = async () => {
-  if (!password.value) {
-    uiStore.showSnackbar({ text: 'Password is required.', color: 'warning' });
-    return;
+const handleUnlock = async () => { // Function to handle the unlock action
+  if (!password.value) { // Check if the password is empty
+    uiStore.showSnackbar({ text: 'Password is required.', color: 'warning' }); // Show a warning snackbar if the password is empty
+    return; // Exit the function early if no password is provided
   }
 
-  loading.value = true; // <-- FIX #2: Move this line HERE.
+  loading.value = true; // Set loading state to true to indicate processing
 
-  try {
-    await authStore.verifyPassword(password.value);
-    uiStore.showSnackbar({ text: 'Private albums unlocked!', color: 'info' });
-    closeDialog(); // Use the correct close function
-  } catch (err) {
-    // We no longer need the local 'error' ref. The snackbar is better.
-    const errorMsg = err.response?.data?.msg || 'An error occurred.';
-    uiStore.showSnackbar({ text: errorMsg, color: 'error' });
-  } finally {
-    password.value = ''; // Clear password field regardless of outcome
-    loading.value = false;
+  try { // Attempt to verify the password using the auth store
+    await authStore.verifyPassword(password.value); // Call the verifyPassword method from the auth store with the provided password
+    uiStore.showSnackbar({ text: 'Private albums unlocked!', color: 'info' }); // Show a success snackbar notification
+    closeDialog(); // Close the dialog by emitting an event to update the modelValue prop
+  } catch (err) { // Catch any errors that occur during password verification
+    const errorMsg = err.response?.data?.msg || 'An error occurred.'; // Extract the error message from the response or use a default message
+    uiStore.showSnackbar({ text: errorMsg, color: 'error' }); // Show an error snackbar notification with the error message
+  } finally { // Ensure that the loading state is reset and the password field is cleared
+    password.value = ''; // Clear the password input field
+    loading.value = false; // Reset the loading state to false
   }
 };
 </script>

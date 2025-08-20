@@ -1,7 +1,16 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+// This file defines a single, reusable Express middleware function named auth.
+// Its sole purpose is to protect API routes. Before any protected route's main
+// logic can run, this middleware intercepts the incoming request.
+// It checks for a valid JSON Web Token (JWT) in the request headers.
+// If a valid token is found, it extracts the user's ID from it and attaches it
+// to the request object for later use. If the token is missing, invalid, or expired,
+// it immediately stops the request and sends back a 401 Unauthorized error,
+// effectively acting as a security guard for the private data.
 
-// This is our middleware function
+const jwt = require('jsonwebtoken'); // Import the jsonwebtoken library for token handling
+require('dotenv').config(); // Load environment variables from .env file
+
+// --- Middleware function ---
 function auth(req, res, next) {
   // 1. Get the token from the request header
   // We'll look for it in a custom header named 'x-auth-token'
@@ -19,12 +28,12 @@ function auth(req, res, next) {
     // If it's invalid or expired, it will throw an error, which will be caught by the catch block.
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // If the token is valid, the 'decoded' variable will contain the payload we created during login.
-    // We attach the user object from the payload to the request object.
+    // If the token is valid, the 'decoded' variable will contain the payload created during login.
+    // The user object is attached from the payload to the request object.
     req.user = decoded.user;
     
-    // Call next() to pass control to the next middleware function or the final route handler.
-    // If we don't call next(), the request will be left hanging.
+    // next() is called to pass control to the next middleware function or the final route handler.
+    // If next() is not called, the request will be left hanging.
     next();
   } catch (err) {
     // If jwt.verify() throws an error, it means the token is not valid.
@@ -32,4 +41,4 @@ function auth(req, res, next) {
   }
 }
 
-module.exports = auth;
+module.exports = auth; // Export the auth middleware function so it can be used in other parts of the application
